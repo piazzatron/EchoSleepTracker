@@ -75,7 +75,8 @@ def set_latency_intent(request):
 
     cur_date = get_cur_date() - timedelta(days=1)
     minutes = request.slots["Minutes"]
-    r = set_value_for_date(cur_date, ATTR_MAP["latency"], minutes)
+    minutes_str = "00:{}:00".format(minutes)
+    r = set_value_for_date(cur_date, ATTR_MAP["latency"], minutes_str)
     # TODO: Unhappy path
     response_str = "OK, I logged your sleep latency as {} minutes.".format(
                     minutes)
@@ -98,22 +99,24 @@ def update_latency_intent(request):
         response_str = "Sorry, it looks like you haven't set a bedtime yet."
         return alexa.create_response(response_str, end_session=True)
 
-    # TODO: Refactor this goopy bit
     prev_bedtime = create_datetime_from_time(prev_bedtime)
 
     latency = int((cur_date - prev_bedtime).total_seconds()/60)
-    set_value_for_date(cur_date, ATTR_MAP["latency"], latency)
+    latency_str = "00:{}:00".format(latency)
+
+    set_value_for_date(cur_date, ATTR_MAP["latency"], latency_str)
 
     response_str = "OK Michael, I updated your sleep latency to {} minutes".format(latency)
     return alexa.create_response(response_str, end_session=True)
 
 
-@alexa.intent_handler("GetTimeSleptIntent")
+# @alexa.intent_handler("GetTimeSleptIntent")
 def get_time_slept_intent(request):
     cur_date = get_cur_date() - timedelta(days=1)
 
     bedtime = get_value_on_date(cur_date, ATTR_MAP["bedtime"])
     waketime = get_value_on_date(cur_date, ATTR_MAP["waketime"])
+    latency = get_value_on_date(cur_date, ATTR_MAP["latency"])
 
     if not bedtime:
         return alexa.create_response("Sorry, looks like you didn't set a bedtime yesterday.")
@@ -121,11 +124,18 @@ def get_time_slept_intent(request):
     if not waketime:
         return alexa.create_response("Sorry, looks like you didn't wake up yesterday.")
 
+    if not latency:
+        latency = timedelta() # In case we didn't record latency
+    else:
+        h, m, s = map(int, latency.split(":"))
+        latency = timedelta(hours=h, minutes=m) 
+
     #If bedtime is before midnight, subtract an extra day
     if bedtime[-2:] == "PM":
         bedtime = create_datetime_from_time(bedtime, cur_date - timedelta(days=1))
     else:
         bedtime = create_datetime_from_time(bedtime, cur_date)
+    bedtime += latency
 
     waketime = create_datetime_from_time(waketime, cur_date)
     duration = waketime - bedtime

@@ -2,4 +2,4 @@ SetBedtimeIntent I'm going to bed
 SetWaketimeIntent I'm awake
 SetLatencyIntent It took me {Minutes} minutes to fall asleep
 UpdateLatencyIntent I'm still awake
-GetTimeSleptIntent How long did I sleep last night?
+GetTimeSleptIntent How long did I sleep last night
