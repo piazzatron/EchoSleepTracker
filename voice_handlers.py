@@ -110,7 +110,7 @@ def update_latency_intent(request):
     return alexa.create_response(response_str, end_session=True)
 
 
-@alexa.intent_handler("GetTimeSleptIntent")
+# @alexa.intent_handler("GetTimeSleptIntent")
 def get_time_slept_intent(request):
     cur_date = get_cur_date() - timedelta(days=1)
 
