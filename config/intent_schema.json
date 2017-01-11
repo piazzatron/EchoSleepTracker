@@ -21,8 +21,11 @@
         {
             "slots": [],
             "intent": "UpdateLatencyIntent"
+        },
+        {
+            "slots": [],
+            "intent": "GetTimeSleptIntent"
         }
     ]
 }
 
-# We could use durations and dates somewhere... pretty cool!

@@ -92,18 +92,14 @@ def update_latency_intent(request):
     if cur_date.hour < 12:
         cur_date = cur_date - timedelta(days=1)
 
-    prev_bedtime = get_value_for_date(cur_date, ATTR_MAP["bedtime"]) 
-    prev_bedtime = prev_bedtime.json()[ATTR_MAP["bedtime"]]
+    prev_bedtime = get_value_on_date(cur_date, ATTR_MAP["bedtime"]) 
 
     if not prev_bedtime:
         response_str = "Sorry, it looks like you haven't set a bedtime yet."
         return alexa.create_response(response_str, end_session=True)
 
     # TODO: Refactor this goopy bit
-    prev_bedtime = datetime.strptime(prev_bedtime, TIME_FMT)
-    prev_bedtime = prev_bedtime.replace(year=cur_date.year, month=cur_date.month,
-                                        day=cur_date.day)
-    prev_bedtime = CURRENT_TZ.localize(prev_bedtime)
+    prev_bedtime = create_datetime_from_time(prev_bedtime)
 
     latency = int((cur_date - prev_bedtime).total_seconds()/60)
     set_value_for_date(cur_date, ATTR_MAP["latency"], latency)
@@ -111,18 +107,69 @@ def update_latency_intent(request):
     response_str = "OK Michael, I updated your sleep latency to {} minutes".format(latency)
     return alexa.create_response(response_str, end_session=True)
 
-def get_value_for_date(d, attribute):
+
+@alexa.intent_handler("GetTimeSleptIntent")
+def get_time_slept_intent(request):
+    cur_date = get_cur_date() - timedelta(days=1)
+
+    bedtime = get_value_on_date(cur_date, ATTR_MAP["bedtime"])
+    waketime = get_value_on_date(cur_date, ATTR_MAP["waketime"])
+
+    if not bedtime:
+        return alexa.create_response("Sorry, looks like you didn't set a bedtime yesterday.")
+
+    if not waketime:
+        return alexa.create_response("Sorry, looks like you didn't wake up yesterday.")
+
+    #If bedtime is before midnight, subtract an extra day
+    if bedtime[-2:] == "PM":
+        bedtime = create_datetime_from_time(bedtime, cur_date - timedelta(days=1))
+    else:
+        bedtime = create_datetime_from_time(bedtime, cur_date)
+
+    waketime = create_datetime_from_time(waketime, cur_date)
+    duration = waketime - bedtime
+    hours = int(duration.total_seconds() / 3600)
+    minutes = int((duration.total_seconds() % 3600)/60)
+
+    response_str = "You slept {} hours and {} minutes last night, Michael.".format(hours, minutes)
+    return alexa.create_response(response_str, end_session=True)
+
+
+
+# TODO: Factor some of this out to a utilities class
+def create_datetime_from_time(date_str, desired_date):
+    """Unparsed a time and creates a datetime of the object on a given date, in the current TZ
+    """
+
+    dt = datetime.strptime(date_str, TIME_FMT)
+    dt = dt.replace(year=desired_date.year, month=desired_date.month, day=desired_date.day)
+    return CURRENT_TZ.localize(dt)
+
+
+def get_value_on_date(d, attribute):
+    """Returns the raw value of an attribute on a given day (extracted from the returned JSON),
+       or none if it doesn't exist.
+    """
+
     date_str = d.strftime(DATE_FMT)
     endpoint = make_endpoint(date_str, attribute)
-    return requests.get(endpoint)
+    value = requests.get(endpoint)
+    try:
+        return value.json()[attribute]
+    except:
+        return None
+
 
 def set_value_for_date(d, attribute, value):
     """POSTS a value for a given date. 
     """
+
     date_str = d.strftime(DATE_FMT)
     payload = {"value": value}
     endpoint = make_endpoint(date_str, attribute)
     return requests.post(endpoint, data=payload)
+
 
 def make_endpoint(date_str, attribute):
     return LOGS_ENDPOINT + "{}/{}".format(date_str, attribute)
@@ -130,3 +177,4 @@ def make_endpoint(date_str, attribute):
 
 def get_cur_date(): 
     return CURRENT_TZ.localize(datetime.now())
+
