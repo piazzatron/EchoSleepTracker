@@ -1,0 +1,28 @@
+{
+    "intents": [
+        {
+            "slots": [], 
+            "intent": "SetBedtimeIntent"
+        },
+        {
+            "slots": [],
+            "intent": "SetWaketimeIntent"
+        },
+        {
+            "slots": [
+                {
+                    "name": "Minutes",
+                    "type": "AMAZON.NUMBER"
+                }
+
+            ],
+            "intent": "SetLatencyIntent"
+        },
+        {
+            "slots": [],
+            "intent": "UpdateLatencyIntent"
+        }
+    ]
+}
+
+# We could use durations and dates somewhere... pretty cool!
